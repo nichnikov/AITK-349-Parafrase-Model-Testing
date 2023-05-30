@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import requests
 
-queies_df = pd.read_csv(os.path.join("data", "search_queries2390.csv"), sep="\t")
+queies_df = pd.read_csv(os.path.join("data", "search_queries12538.csv"), sep="\t")
 print(queies_df)
 test_results = []
 for num, q in enumerate(list(queies_df["Query"])):
@@ -15,4 +15,4 @@ for num, q in enumerate(list(queies_df["Query"])):
 
 test_results_df = pd.DataFrame(test_results)
 print(test_results_df)
-test_results_df.to_csv(os.path.join("data", "results", "fa_test_results2390.csv"), sep="\t", index=False)
+test_results_df.to_csv(os.path.join("data", "results", "fa_test_results12538.csv"), sep="\t", index=False)

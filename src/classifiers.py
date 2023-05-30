@@ -73,7 +73,7 @@ class FastAnswerClassifier:
     async def tested_searching(self, text: str, pubid: int, score: float):
         """"""
         """возвращает несколько скоров и позиций эластика для оценки работы Эластик + Сберт:"""
-        SearchResult = namedtuple("SearchResult", "ID, Etalon, LemEtalon, Score")
+        SearchResult = namedtuple("SearchResult", "ID, Etalon, LemEtalon, Score, FastAnswerText")
         try:
             tokens = self.tkz([text])
             if tokens[0]:
@@ -81,14 +81,15 @@ class FastAnswerClassifier:
                 etalons_search_result = await self.es.texts_search(self.prm.clusters_index, "LemCluster", [tokens_str])
                 result_dicts = etalons_search_result[0]["search_results"]
                 if result_dicts:
-                    results_tuples = [(d["ID"], d["Cluster"], d["LemCluster"]) for d in result_dicts]
+                    results_tuples = [(d["ID"], d["Cluster"], d["LemCluster"], d["ShortAnswerText"])
+                                      for d in result_dicts]
                     text_emb = self.model.encode(text)
-                    ids, ets, lm_ets = zip(*results_tuples)
+                    ids, ets, lm_ets, fa_texts = zip(*results_tuples)
                     candidate_embs = self.model.encode(ets)
                     scores = util.cos_sim(text_emb, candidate_embs)
                     scores_list = [score.item() for score in scores[0]]
                     search_result = {}
-                    candidates = [SearchResult(*x) for x in list(zip(ids, ets, lm_ets, scores_list)) if x[3]]
+                    candidates = [SearchResult(*x) for x in list(zip(ids, ets, lm_ets, scores_list, fa_texts)) if x[3]]
                     search_result["ElasticOutputQuantity"] = len(candidates)
                     search_result["FastAnswerQuantity"] = len(set(ids))
                     for i in range(3):
@@ -110,6 +111,7 @@ class FastAnswerClassifier:
                         search_result["BestID"] = the_best_result.ID
                         search_result["BestEtalon"] = the_best_result.Etalon
                         search_result["BestScore"] = the_best_result.Score
+                        search_result["BestFastAnswerText"] = the_best_result.FastAnswerText
                         answers_search_result = await self.es.answer_search(self.prm.answers_index, the_best_result.ID,
                                                                             pubid)
                         if answers_search_result["search_results"]:
@@ -121,6 +123,7 @@ class FastAnswerClassifier:
                         search_result["BestScore"] = "NO"
                         search_result["BestAnswer"] = "NO"
                         search_result["BestElasticNum"] = 0
+                        search_result["BestFastAnswerText"] = "NO"
                     return search_result
                 else:
                     logger.info("elasticsearch doesn't find any etalons for input text {}".format(str(text)))
